@@ -1,0 +1,3 @@
+interface:
+  display_name: "Use Chrome"
+  short_description: "Connect OpenCode to signed-in Chrome tabs"
