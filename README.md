@@ -10,20 +10,20 @@ The first-run setup and no-click connection were tested with OpenCode, Chrome, a
 
 ## Install
 
-Clone this private repository into the skill directory used by your harness. For example:
+Clone this repository into the skill directory used by your harness. For example:
 
 ```bash
 # OpenCode
-git clone git@github.com:boonkgim/use-chrome.git ~/.config/opencode/skills/use-chrome
+git clone https://github.com/boonkgim/use-chrome.git ~/.config/opencode/skills/use-chrome
 
 # Claude Code
-git clone git@github.com:boonkgim/use-chrome.git ~/.claude/skills/use-chrome
+git clone https://github.com/boonkgim/use-chrome.git ~/.claude/skills/use-chrome
 
 # Codex
-git clone git@github.com:boonkgim/use-chrome.git ~/.agents/skills/use-chrome
+git clone https://github.com/boonkgim/use-chrome.git ~/.agents/skills/use-chrome
 ```
 
-Use the path for **one** harness, or clone once and link it into the others. Private repository access is required. Restart the harness after installing or changing its MCP configuration.
+Use the path for **one** harness, or clone once and link it into the others. Restart the harness after installing or changing its MCP configuration.
 
 ## First use
 
