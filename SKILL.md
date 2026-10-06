@@ -1,12 +1,35 @@
 ---
 name: use-chrome
-description: Connect an MCP-capable coding agent to the user's existing signed-in Chrome profile through Playwright MCP. Use when an agent needs Chrome tabs or a logged-in website, including first-time setup and connection troubleshooting.
+description: Connect an MCP-capable coding agent to the user's existing signed-in Chrome profile through Playwright MCP, or to a clean unauthenticated browser when a logged-out view is explicitly requested. Use when an agent needs Chrome tabs, a logged-in website, a logged-out/anonymous view, SERP navigation, or connection troubleshooting.
 license: MIT
 ---
 
 # Use signed-in Chrome
 
 Use the [Playwright Extension](https://github.com/microsoft/playwright/blob/main/packages/extension/README.md) with `@playwright/mcp --extension`. It works with the user's normal Chrome profile and sign-ins. This skill applies to coding agents that can load its `SKILL.md` instructions and use local MCP servers. Each harness has its own skill installation path and MCP configuration format; do not assume OpenCode's format applies elsewhere. Do not use a separate Playwright profile for a task that requires an existing login.
+
+## Choosing the browser: logged-in (default) vs clean
+
+**Default to the user's logged-in Chrome.** Unless the user explicitly asks otherwise, connect to their existing signed-in profile through the extension — that is the rest of this skill. Most tasks need it.
+
+**Use a clean, unauthenticated browser only when the user asks for a logged-out view** — phrases like "use your own profile, not mine", "logged out", "a fresh profile", or "what a real visitor would see". A clean profile is a brand-new empty `user-data-dir`: no cookies, no Google account, no site sign-ins. Never copy the user's cookies, profile files, or tokens into it, and do not spoof browser identity to get around a login or security check.
+
+**Exception — Google SERP work defaults to logged-out.** For Google ranking/SERP checks
+("where does X rank", page-1 analysis, etc.) use the clean browser by default, because a
+signed-in Google SERP is personalized and shows owner-only panels. Use the user's logged-in
+session for a SERP check only when they explicitly ask for *their* personal view.
+Details: [references/google-serp.md](references/google-serp.md).
+
+Know which view you are serving. A **logged-in** Google session can show owner-only boxes that a real visitor never sees (e.g. a Search Console "Search performance for this query" panel marked "Visible only to you"). If the question is "what does a normal visitor see?", a logged-in SERP is *not* the answer — use the clean browser. When in doubt, ask.
+
+## Clean (unauthenticated) browser
+
+For logged-out work, launch a standalone Playwright/Chromium with a fresh empty profile, not the user's Chrome:
+
+- **Fresh profile**: `chromium.launchPersistentContext('<tmp>/clean-profile')` on a wiped or brand-new `user-data-dir`. Point `executablePath` at the system Chrome (e.g. `/usr/bin/google-chrome`) when a matching bundled Chromium build is not downloaded.
+- **Default to headless** (`headless: true`) for unattended runs.
+- **If a captcha blocks you, switch to headful and ask the user.** A headless session on this kind of network gets flagged by Google ("Our systems have detected unusual traffic" / an "I'm not a robot" reCAPTCHA) and cannot solve it itself. Relaunch the **same profile** with `headless: false` and `--start-maximized` so the window is easy to find (a tiny default-size window gets hidden behind other apps), tell the user exactly where it is, and have them click through the captcha. Poll the page until the results render, then continue. **Reuse the same `user-data-dir`** so the cleared state persists across later runs in the same task.
+- **Save the full HTML per page** (`page.content()` to disk) and parse it offline rather than reading the live DOM through the relay. For Google SERP specifics — paging, result extraction, captcha detection, and the gotchas — see [references/google-serp.md](references/google-serp.md).
 
 ## Start with a connection check
 
@@ -50,6 +73,12 @@ many turns, especially on heavy single-page apps (App Store Connect, Play Consol
   step.
 - **Never print the extension token or the site's secrets/env values** to the transcript or a
   commit; compare through shell variables and print only yes/no/counts.
+- **Anti-bot / captcha escalation.** Some sites (notably Google) serve a captcha or
+  "unusual traffic" interstitial to automated access. Detect it (URL keywords like
+  `sorry/index`, `unusual traffic`, `recaptcha`), and **do not** try to bypass it or spoof
+  identity. If you are headless and cannot solve it, relaunch headful with a visible
+  (`--start-maximized`) window and **ask the user to solve it**, then continue. For clean
+  profiles default to headless and only go headful on a block; see the Clean browser section.
 
 ## If unattended use is requested
 
