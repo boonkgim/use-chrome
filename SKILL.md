@@ -24,6 +24,33 @@ If the requested Chrome tab is already accessible through a browser tool, use it
 
 Do not copy cookies, browser profile files, or authentication tokens into another browser. Do not spoof browser identity to get around a login or security check. If a browser policy blocks an extension or remote-debugging page, stop that route instead of trying CDP, shell commands, another browser surface, or an indirect route around the block.
 
+## Driving the page reliably
+
+Once connected, drive the target page with the browser tools. These are hard-won gotchas that save
+many turns, especially on heavy single-page apps (App Store Connect, Play Console, …).
+
+- **Prefer the accessibility tools first** (`browser_snapshot`, `browser_find`). Some SPAs hide
+  action buttons from the accessibility tree even though they are in the DOM: when `browser_find`
+  reports "No matches" for a control you can see, fall back to a DOM-level `browser_evaluate`
+  click matched on `element.textContent.trim()`.
+- **`browser_evaluate` through the extension relay mangles complex JS.** Keep the function
+  **single-line** and avoid **regex literals, backslashes, and escaped double quotes** — the relay
+  truncates/corrupts them and the call fails with "Unexpected end of input" or "missing ) after
+  argument list". Use `.indexOf()` instead of regex, block bodies with an explicit `return`, and
+  plain double quotes only.
+- **React-controlled inputs and textareas:** assigning `.value` alone does not update React state.
+  Use the native value setter, then dispatch events:
+  `Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value").set.call(el, "x")`
+  followed by `el.dispatchEvent(new Event("input", { bubbles: true }))` (and `change` / `blur`).
+- **Probe before you act.** Run a read-only `browser_evaluate` that lists the candidate controls
+  and confirms the target is uniquely identifiable before clicking anything destructive.
+- **Keep one persistent connection** so the "current tab" survives across calls; do not restart the
+  MCP server per call (that resets tab context and causes connect/disconnect churn).
+- **Verify state after each step** (URL, the changed field, the resulting status) before the next
+  step.
+- **Never print the extension token or the site's secrets/env values** to the transcript or a
+  commit; compare through shell variables and print only yes/no/counts.
+
 ## If unattended use is requested
 
 The extension's `PLAYWRIGHT_MCP_EXTENSION_TOKEN` can skip future connection approvals. It does not grant access to all tabs; Playwright still controls its own tab group. Have the user generate and enter a fresh token locally, without pasting it into chat or committing it. Use a secret file with mode `0600` or another local secret store. Verify a **new** harness process can open the signed-in page with no browser click before calling the setup unattended. Keep Chrome running in the signed-in profile. If the page fails to load, report the result and leave scheduling disabled.
