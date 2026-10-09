@@ -18,11 +18,12 @@ Drive Chrome with the [Playwright Agent CLI](https://playwright.dev/agent-cli/in
 
 **Use a clean, unauthenticated browser only when the user asks for a logged-out view** — phrases like "use your own profile, not mine", "logged out", "a fresh profile", or "what a real visitor would see". A clean profile is a brand-new empty `user-data-dir`: no cookies, no Google account, no site sign-ins. Never copy the user's cookies, profile files, or tokens into it, and do not spoof browser identity to get around a login or security check.
 
-**Exception — Google SERP work defaults to logged-out.** For Google ranking/SERP checks
-("where does X rank", page-1 analysis, etc.) use the clean browser by default, because a
-signed-in Google SERP is personalized and shows owner-only panels. Use the user's logged-in
-session for a SERP check only when they explicitly ask for *their* personal view.
-Details: [references/google-serp.md](references/google-serp.md).
+**Exception — Google SERP work defaults to logged-out, and headful.** For Google
+ranking/SERP checks ("where does X rank", page-1 analysis, etc.) use the clean browser by
+default, because a signed-in Google SERP is personalized and shows owner-only panels. Use
+the user's logged-in session for a SERP check only when they explicitly ask for *their*
+personal view. Open the clean profile with `--headed` — a headless clean Chrome is
+reliably captcha'd by Google. Details: [references/google-serp.md](references/google-serp.md).
 
 Know which view you are serving. A **logged-in** Google session can show owner-only boxes that a real visitor never sees (e.g. a Search Console "Search performance for this query" panel marked "Visible only to you"). If the question is "what does a normal visitor see?", a logged-in SERP is *not* the answer — use the clean browser. When in doubt, ask.
 
@@ -51,8 +52,10 @@ For logged-out work, launch a standalone browser with a fresh empty profile, not
 
 - **In-memory profile (default):** `playwright-cli open <url> --browser=chrome` — a brand-new empty profile, no cookies, no sign-ins. The CLI runs **headless by default**; add `--headed` to see it.
 - **Reuse across runs in the same task:** `--persistent` (profile on disk, survives restarts) or `--profile=<dir>` (a wiped or brand-new `user-data-dir`). Reuse the same dir so cleared state persists across later runs.
-- **Default to headless** for unattended runs. **If a captcha blocks you, switch to headful and ask the user:** relaunch the **same profile** with `--headed` (a tiny default-size window gets hidden behind other apps — use `--mobile` or a larger viewport if it hides), tell the user exactly where it is, have them click through the captcha, then poll `snapshot` until the results render.
-- **Save the full HTML per page and parse offline** rather than reading the live DOM through the relay — see the "Driving the page reliably" note and [references/google-serp.md](references/google-serp.md) for SERP specifics (paging, extraction, captcha detection, and the Node-script path for capturing full HTML).
+- **Headful for Google SERP work:** open the clean profile with `--headed` from the start. A clean *headless* browser is served the Google "unusual traffic" captcha nearly every time, and reloading does not clear it — a headful clean profile sails through without one. For other unattended work stay headless and **if a captcha blocks you, switch to headful and ask the user:** relaunch the **same profile** with `--headed`.
+- **A `--headed` window opens small and can hide behind other apps.** There is no `--start-maximized` flag; right after `open` run `playwright-cli -s=<name> resize 1400 900` (or `--mobile`) so the user can find it. Tell the user exactly where it is, have them click through the captcha, then poll `snapshot` until the results render.
+- **Expect two harmless cosmetic things in the window** (do not "fix" them): the Chromium infobar "unsupported command-line flag: --disable-blink-features=AutomationControlled" (the CLI adds that flag to hide the automation banner, and Chromium warns about it — dismiss with ×), and a page that is narrower than a maximized window (`resize` sets the viewport, not the OS window; leftover space renders as gray). Details: [references/google-serp.md](references/google-serp.md).
+- **Save the full HTML per page and parse offline** rather than reading the live DOM through the relay — see the "Driving the page reliably" note and [references/google-serp.md](references/google-serp.md) for SERP specifics (paging, extraction, captcha detection, and capturing full HTML with `eval --raw` + shell redirect — `run-code` cannot write files).
 
 ## Start with a connection check
 
@@ -82,7 +85,7 @@ Once attached, drive the target page with `playwright-cli` commands. The pattern
 - **Verify state after each step** (URL, the changed field, the resulting status) before the next step. `playwright-cli -s=chrome snapshot` re-reads the page.
 - **Network inspection** is available without MCP: `requests` (numbered list), `request <n>` (full details), `route`/`unroute` to mock.
 - **Never print the extension token or the site's secrets/env values** to the transcript or a commit; compare through shell variables and print only yes/no/counts.
-- **Anti-bot / captcha escalation.** Some sites (notably Google) serve a captcha or "unusual traffic" interstitial to automated access. Detect it (URL keywords like `sorry/index`, `unusual traffic`, `recaptcha`), and **do not** try to bypass it or spoof identity. If you are headless and cannot solve it, relaunch headful with a visible window and **ask the user to solve it**, then continue. For clean profiles default to headless and only go headful on a block; see the Clean browser section.
+- **Anti-bot / captcha escalation.** Some sites (notably Google) serve a captcha or "unusual traffic" interstitial to automated access. Detect it (URL keywords like `sorry/index`, `unusual traffic`, `recaptcha`), and **do not** try to bypass it or spoof identity. If you are headless and cannot solve it, relaunch headful with a visible window and **ask the user to solve it**, then continue. For clean profiles default to headless for general unattended work, but **for Google SERP work go headful from the start** — see the Clean browser section.
 
 ## If unattended use is requested
 
