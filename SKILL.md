@@ -6,7 +6,7 @@ license: MIT
 
 # Use signed-in Chrome (via `playwright-cli`)
 
-Drive Chrome with the [Playwright Agent CLI](https://playwright.dev/agent-cli/introduction) — `playwright-cli` from the `@playwright/cli` package. The agent issues `playwright-cli ...` commands through its `bash` tool. There is **no MCP server and no browser tool schemas in the prompt** — that is the point. To reuse the user's signed-in profile, attach through the [Playwright Extension](https://github.com/microsoft/playwright/blob/main/packages/extension/README.md) with `attach --extension`.
+Drive Chrome with the [Playwright Agent CLI](https://playwright.dev/agent-cli/introduction) — `playwright-cli` from the `@playwright/cli` package. The agent issues `playwright-cli ...` commands through its `bash` tool. There is **no MCP server and no browser tool schemas in the prompt** — that is the point. To reuse the user's signed-in profile, attach through the [Playwright Extension](https://github.com/microsoft/playwright/blob/main/packages/extension/README.md) with `attach --extension=chrome` (the channel value is required; bare `--extension` fails on CLI 0.1.22).
 
 - **Install once:** `npm install -g @playwright/cli` (verify: `playwright-cli --version`). If a global install is not possible, `npx @playwright/cli` works the same way but is slower per call.
 - **Command reference on demand:** `playwright-cli --help` and `playwright-cli <cmd> --help`. For a resident, compact reference install the skill: `playwright-cli install --skills` (or `--skills=agents -g` for a shared install). Each harness has its own skill install path; do not assume OpenCode's applies elsewhere.
@@ -36,8 +36,8 @@ Attach to the running Chrome via the extension, reusing its sign-ins, cookies, a
 # the token auto-approves the connection (no "Allow & select" click):
 export PLAYWRIGHT_MCP_EXTENSION_TOKEN="$(cut -d= -f2 "$HOME/.config/playwright-cli/extension-token")"
 
-playwright-cli -s=chrome attach --extension        # default channel = Chrome
-# or a specific channel:  playwright-cli -s=chrome attach --extension=chrome-canary
+playwright-cli -s=chrome attach --extension=chrome        # channel value is required (CLI 0.1.22)
+# or another channel:  playwright-cli -s=chrome attach --extension=chrome-canary
 ```
 
 - Use one named session (`-s=chrome`) so "the current tab" survives across commands; do **not** re-attach per call (that resets tab context and causes connect/disconnect churn).
@@ -80,7 +80,7 @@ If the requested Chrome tab is already accessible, just use it. Setup is only fo
 
 1. Identify the Chrome profile that is signed in to the requested site. The user can read the last component of **Profile Path** at `chrome://version`. If browser policy blocks that page, ask the user for the profile directory name; do not use a blocked page through another route.
 2. Confirm the Playwright Extension is installed in that same Chrome profile ([store page](https://chromewebstore.google.com/detail/playwright-extension/mmlmfjhmonkocbjadbfplnigmagldckm)); the agent may open the store only when its browser tool permits it.
-3. Attach and drive: `playwright-cli -s=<name> attach --extension` (with the token set, see above). Check the resulting page URL and content. An authwall, sign-in form, connection timeout, or an extension page is **not** a successful connection. Report the observed blocker and stop before site-specific work.
+3. Attach and drive: `playwright-cli -s=<name> attach --extension=chrome` (with the token set, see above). Check the resulting page URL and content. An authwall, sign-in form, connection timeout, or an extension page is **not** a successful connection. Report the observed blocker and stop before site-specific work.
 
 Do not copy cookies, browser profile files, or authentication tokens into another browser. Do not spoof browser identity to get around a login or security check. If a browser policy blocks an extension or remote-debugging page, stop that route instead of trying CDP, shell commands, another browser surface, or an indirect route around the block.
 
@@ -104,6 +104,6 @@ Once attached, drive the target page with `playwright-cli` commands. The pattern
 
 ## If unattended use is requested
 
-The extension token (`PLAYWRIGHT_MCP_EXTENSION_TOKEN`) can skip future connection approvals. It does not grant access to all tabs; Playwright still controls its own tab group. Have the user generate and enter a fresh token locally, without pasting it into chat or committing it. Store it in a secret file with mode `0600` — the default here is `~/.config/playwright-cli/extension-token` (created by this setup) — and feed it to the CLI with `export PLAYWRIGHT_MCP_EXTENSION_TOKEN="$(cut -d= -f2 "$HOME/.config/playwright-cli/extension-token")"` before `attach --extension`. Verify a **new** CLI process can open the signed-in page with no browser click before calling the setup unattended. Keep Chrome running in the signed-in profile. If the page fails to load, report the result and leave scheduling disabled.
+The extension token (`PLAYWRIGHT_MCP_EXTENSION_TOKEN`) can skip future connection approvals. It does not grant access to all tabs; Playwright still controls its own tab group. Have the user generate and enter a fresh token locally, without pasting it into chat or committing it. Store it in a secret file with mode `0600` — the default here is `~/.config/playwright-cli/extension-token` (created by this setup) — and feed it to the CLI with `export PLAYWRIGHT_MCP_EXTENSION_TOKEN="$(cut -d= -f2 "$HOME/.config/playwright-cli/extension-token")"` before `attach --extension=chrome`. Verify a **new** CLI process can open the signed-in page with no browser click before calling the setup unattended. Keep Chrome running in the signed-in profile. If the page fails to load, report the result and leave scheduling disabled.
 
 The token and extension options are documented in [Playwright's extension guide](https://github.com/microsoft/playwright/blob/main/packages/extension/README.md); CLI configuration and the full `PLAYWRIGHT_MCP_*` env list are in [the CLI configuration docs](https://playwright.dev/agent-cli/configuration).

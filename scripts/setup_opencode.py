@@ -52,7 +52,7 @@ def check(token_file: Path, profile: str | None) -> int:
         "token_file_present": token_file_present(token_file),
         "extension_profile": profile,
         "extension_installed_in_profile": extension_installed(profile),
-        "attach_command": f'export PLAYWRIGHT_MCP_EXTENSION_TOKEN="$(cut -d= -f2 {token_file})" && playwright-cli -s=chrome attach --extension',
+        "attach_command": f'export PLAYWRIGHT_MCP_EXTENSION_TOKEN="$(cut -d= -f2 {token_file})" && playwright-cli -s=chrome attach --extension=chrome',
     }, indent=2))
     return 0
 
@@ -68,7 +68,7 @@ def configure(token_file: Path, profile: str | None) -> int:
     else:
         print(f"Token secret already present at {token_file}.")
     print(f'export PLAYWRIGHT_MCP_EXTENSION_TOKEN="$(cut -d= -f2 {token_file})"')
-    print("playwright-cli -s=chrome attach --extension")
+    print("playwright-cli -s=chrome attach --extension=chrome")
     if profile:
         print(f"(profile: {profile}; extension installed there: {extension_installed(profile)})")
     return 0
