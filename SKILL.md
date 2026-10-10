@@ -42,9 +42,22 @@ playwright-cli -s=chrome attach --extension        # default channel = Chrome
 
 - Use one named session (`-s=chrome`) so "the current tab" survives across commands; do **not** re-attach per call (that resets tab context and causes connect/disconnect churn).
 - `attach` reuses the browser that's already running; it does not open a new one. The first `playwright-cli -s=chrome snapshot` returns the accessibility tree of the current tab.
+- **Pass the channel inside the flag, never as the positional name.** `attach --extension=chrome` is correct; `attach chrome --extension=chrome` fails ("only one of [name], --cdp, --endpoint, or --extension can be specified") — the positional `[name]` is for attaching to a Playwright browser-server instance, not for the extension channel.
 - When done, **`playwright-cli -s=chrome detach`** tears down the CLI session while leaving the user's Chrome running. Only `close` shuts a browser the CLI launched itself.
 
 If the token is absent or expired, the Playwright **Welcome** page appears instead: have the user select the intended tab with **Allow & select** (only the user should approve a connection to their browser). If the target tab is missing from the list, open that site in Chrome and refresh the newest Welcome page. See "If unattended use is requested" below for setting up a token.
+
+### Navigating an attached session: `goto` and `tab-new`, never `open`
+
+**`open` is a *launch* verb, not a navigate verb.** In an extension-attached session, `playwright-cli open <url>` does **not** navigate your user's Chrome — it starts a brand-new local Playwright browser with a fresh temp `user-data-dir` (`/tmp/playwright_chromiumdev_profile-…`, `--disable-extensions`), so every page shows logged-out sign-in views even though the user is fully signed in. The tell in output is a line like `### Browser \`chrome\` opened with pid …` — any navigation command in an attached session that prints that line silently switched you to the clean context.
+
+Navigate inside the user's browser with:
+
+- `goto <url>` — navigate the current tab.
+- `tab-new [url]` / `tab-list` / `tab-select <i>` — work in the extension's tab group; `tab-list` also tells you which tabs (hence which browser) you are in.
+- `snapshot`, `find`, and the action commands — as usual, on whatever tab is current.
+
+**Verify you are in the user's browser before site-specific work.** A sign-in form, a "logged out" marketing landing, or a `tab-list` with only the page you just opened means you are in a CLI-launched clean context: stop, `close` the launched browser, re-`attach`, and navigate with `goto`. The positive proof is a signed-in landing (an inbox, an account dashboard, an app workspace). A sign-in page on one site can also simply mean *that site* is not signed into the profile — check `tab-list` and try a second site before concluding the connection failed.
 
 ## Clean (unauthenticated) browser
 
@@ -74,6 +87,8 @@ Do not copy cookies, browser profile files, or authentication tokens into anothe
 ## Driving the page reliably
 
 Once attached, drive the target page with `playwright-cli` commands. The pattern is: **`snapshot` → read the element refs → act by ref** (refs look like `e15`). These are hard-won gotchas that save many turns, especially on heavy single-page apps (App Store Connect, Play Console, …).
+
+- **Navigate attached sessions with `goto` / `tab-new`, never `open`** — `open` launches a clean browser with no sign-ins. See "Navigating an attached session" above.
 
 - **Prefer the accessibility tools first** (`snapshot`, `find`). Some SPAs hide action buttons from the accessibility tree even though they are in the DOM: when `find` reports "No matches" for a control you can see, fall back to a DOM-level `eval` click matched on `element.textContent.trim()`.
 - **`eval` through the extension relay mangles complex JS (extension mode).** Keep the function **single-line** and avoid **regex literals, backslashes, and escaped double quotes** — the relay truncates/corrupts them and the call fails with "Unexpected end of input" or "missing ) after argument list". Use `.indexOf()` instead of regex, block bodies with an explicit `return`, and plain double quotes only. Over a CDP/self-launched browser the relay is not in the path, so `eval` is more forgiving.
