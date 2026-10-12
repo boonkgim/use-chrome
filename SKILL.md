@@ -59,6 +59,16 @@ Navigate inside the user's browser with:
 
 **Verify you are in the user's browser before site-specific work.** A sign-in form, a "logged out" marketing landing, or a `tab-list` with only the page you just opened means you are in a CLI-launched clean context: stop, `close` the launched browser, re-`attach`, and navigate with `goto`. The positive proof is a signed-in landing (an inbox, an account dashboard, an app workspace). A sign-in page on one site can also simply mean *that site* is not signed into the profile — check `tab-list` and try a second site before concluding the connection failed.
 
+### Bank sites: never `go-back`, `reload`, or `goto` mid-session
+
+On banking portals (OCBC Internet Banking confirmed; treat other banks the same until proven otherwise), the app is a session-sensitive SPA: any **hard navigation** drops the session back to login.
+
+- `go-back` / `go-forward` → session dropped.
+- `reload` → session dropped.
+- `goto` to an internal URL → session dropped.
+
+**Only in-app SPA interactions keep the session alive:** clicking menu items, links, accordion headers, form fields, submitting forms. So navigate by clicking the site's own UI, never by history or address-bar commands. After the user logs in, do not navigate at all until they say to proceed, and make the first move a screenshot (not a `goto`). A dropped session costs a full user re-login (credentials + TFA), so treat it as a real cost. The `download-bank-statement` skill's `references/ocbc.md` has the OCBC-specific version of this rule.
+
 ## Clean (unauthenticated) browser
 
 For logged-out work, launch a standalone browser with a fresh empty profile, not the user's Chrome:
@@ -100,6 +110,24 @@ Once attached, drive the target page with `playwright-cli` commands. The pattern
 - **Verify state after each step** (URL, the changed field, the resulting status) before the next step. `playwright-cli -s=chrome snapshot` re-reads the page.
 - **Network inspection** is available without MCP: `requests` (numbered list), `request <n>` (full details), `route`/`unroute` to mock.
 - **Never print the extension token or the site's secrets/env values** to the transcript or a commit; compare through shell variables and print only yes/no/counts.
+### Screenshot to analyse what you're looking at
+
+The accessibility tree can be misleading (label-less buttons, collapsed/hidden panels, toasts).
+When you're not sure what the page actually shows — especially before/after a click on a
+banking or SPA page, or when a click "didn't work" — **take a screenshot and read it**:
+
+```
+playwright-cli -s=chrome screenshot --filename=/tmp/page.png    # viewport
+playwright-cli -s=chrome screenshot --filename=/tmp/full.png --full-page
+playwright-cli -s=chrome screenshot e123 --filename=/tmp/el.png # element by a11y ref
+```
+
+then `read` the file — it comes back as an image you can see. Screenshots catch things the
+`snapshot` tree hides: blocking interstitials/modals (e.g. a bank's "Important Notice"
+confirm drawer), empty-but-open drawers, toasts, and whether a panel really changed after a
+click. Use them to verify state the same way `find`/`snapshot` do — don't act on a click
+you haven't confirmed.
+
 - **Anti-bot / captcha escalation.** Some sites (notably Google) serve a captcha or "unusual traffic" interstitial to automated access. Detect it (URL keywords like `sorry/index`, `unusual traffic`, `recaptcha`), and **do not** try to bypass it or spoof identity. If you are headless and cannot solve it, relaunch headful with a visible window and **ask the user to solve it**, then continue. For clean profiles default to headless for general unattended work, but **for Google SERP work go headful from the start** — see the Clean browser section.
 
 ## If unattended use is requested
