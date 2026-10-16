@@ -43,7 +43,7 @@ playwright-cli -s=chrome attach --extension=chrome        # channel value is req
 - Use one named session (`-s=chrome`) so "the current tab" survives across commands; do **not** re-attach per call (that resets tab context and causes connect/disconnect churn).
 - `attach` reuses the browser that's already running; it does not open a new one. The first `playwright-cli -s=chrome snapshot` returns the accessibility tree of the current tab.
 - **Pass the channel inside the flag, never as the positional name.** `attach --extension=chrome` is correct; `attach chrome --extension=chrome` fails ("only one of [name], --cdp, --endpoint, or --extension can be specified") — the positional `[name]` is for attaching to a Playwright browser-server instance, not for the extension channel.
-- When done, **`playwright-cli -s=chrome detach`** tears down the CLI session while leaving the user's Chrome running. Only `close` shuts a browser the CLI launched itself.
+- When done, wrap up per [Wrap up: closing the connection cleanly](#wrap-up-closing-the-connection-cleanly) — close the leftover **Welcome** relay tab while still attached, then `playwright-cli -s=chrome detach` (tears down the CLI session while leaving the user's Chrome running). Only `close` shuts a browser the CLI launched itself.
 
 If the token is absent or expired, the Playwright **Welcome** page appears instead: have the user select the intended tab with **Allow & select** (only the user should approve a connection to their browser). If the target tab is missing from the list, open that site in Chrome and refresh the newest Welcome page. See "If unattended use is requested" below for setting up a token.
 
@@ -68,6 +68,18 @@ On banking portals (OCBC Internet Banking confirmed; treat other banks the same 
 - `goto` to an internal URL → session dropped.
 
 **Only in-app SPA interactions keep the session alive:** clicking menu items, links, accordion headers, form fields, submitting forms. So navigate by clicking the site's own UI, never by history or address-bar commands. After the user logs in, do not navigate at all until they say to proceed, and make the first move a screenshot (not a `goto`). A dropped session costs a full user re-login (credentials + TFA), so treat it as a real cost. The `download-bank-statement` skill's `references/ocbc.md` has the OCBC-specific version of this rule.
+
+## Wrap up: closing the connection cleanly
+
+`detach` ends the CLI session but **leaves the Playwright Welcome tab** — the extension's `connect.html` relay page (a `chrome-extension://…/connect.html` tab, usually index 0) — open in the user's browser. To wrap up without leaving that stray tab behind:
+
+The Welcome tab is the extension's **relay tab**, and closing it tears down the managed relay context. So close it **while still attached, as the final step** — you can't close it after `detach` (a re-attach just recreates it).
+
+1. While still attached, close any work tabs you opened and want gone: `tab-select <i>; tab-close` for each.
+2. Find the Welcome tab's index from `tab-list` (the `chrome-extension://…/connect.html` entry), `tab-select` it if it isn't already current, then `tab-close`. The CLI then reports "No open tabs" / "browser not open" — that is the expected end state, not an error.
+3. `playwright-cli -s=chrome detach` for a clean teardown (a no-op once the context is gone).
+
+Do any remaining work **before** this last step: closing the relay tab ends the session. Verified (CLI 0.1.22 + Playwright Extension): `attach` (re)creates the Welcome tab as the current tab; `detach` leaves it open; `tab-close` on that relay tab tears down the managed context, leaving Chrome running without the stray tab.
 
 ## Clean (unauthenticated) browser
 
