@@ -1,0 +1,110 @@
+{
+  "version": 1,
+  "project": "use-chrome",
+  "inventory": "backup-inventory.json",
+  "review_threshold_mib": 15,
+  "github": {
+    "remote": "origin",
+    "branch": "main",
+    "approved": true
+  },
+  "drive": {
+    "account": null,
+    "folder_id": null,
+    "approved": false,
+    "gog_wrapper": "gog",
+    "sharing": "owner-only"
+  },
+  "secrets": {
+    "recipient_file": null,
+    "private_config_reference": null,
+    "recovery_copy_verified": false,
+    "applicability": "No project credential payload discovered; global authentication/key custody outside this folder scope."
+  },
+  "exclude": [
+    ".git",
+    "node_modules",
+    ".venv",
+    "venv",
+    "__pycache__",
+    "dist",
+    "build"
+  ],
+  "records": [
+    {
+      "path": ".gitignore",
+      "route": "github",
+      "classification": "ordinary",
+      "reviewed": true
+    },
+    {
+      "path": "LICENSE",
+      "route": "github",
+      "classification": "ordinary",
+      "reviewed": true
+    },
+    {
+      "path": "README.md",
+      "route": "github",
+      "classification": "ordinary",
+      "reviewed": true
+    },
+    {
+      "path": "SKILL.md",
+      "route": "github",
+      "classification": "ordinary",
+      "reviewed": true
+    },
+    {
+      "path": "agents/openai.yaml",
+      "route": "github",
+      "classification": "ordinary",
+      "reviewed": true
+    },
+    {
+      "path": "references/google-serp.md",
+      "route": "github",
+      "classification": "ordinary",
+      "reviewed": true
+    },
+    {
+      "path": "scripts/setup_opencode.py",
+      "route": "github",
+      "classification": "ordinary",
+      "reviewed": true
+    },
+    {
+      "path": "AGENTS.md",
+      "route": "github",
+      "classification": "ordinary",
+      "reviewed": true
+    },
+    {
+      "path": "backup.config.json",
+      "route": "github",
+      "classification": "ordinary",
+      "reviewed": true
+    }
+  ],
+  "exceptions": [
+    "Preserve all originals and existing live edits. Current checkout only; Git internals and other worktrees excluded.",
+    "Python bytecode is regenerable from the retained source and is not a required backup payload."
+  ],
+  "migration": {
+    "status": "migrated",
+    "sources": [
+      {
+        "path": "owner request 2026-11-02",
+        "decision": "Back up all local skill repositories using the shared SOP."
+      }
+    ],
+    "unresolved": []
+  },
+  "note": "Ordinary current-folder backup. No Drive destination configured or needed for the reviewed payload. No restore/DR or global credential backup claim.",
+  "procedure": {
+    "source": "https://github.com/boonkgim/backup-project",
+    "revision": "789f5d72e12066c6d4c873fa45591ef91d6b5f7f",
+    "reference": "https://github.com/boonkgim/backup-project/blob/789f5d72e12066c6d4c873fa45591ef91d6b5f7f/SKILL.md",
+    "access_custodian": "Repository owner; approved skill source is private."
+  }
+}
